@@ -48,6 +48,8 @@ def main(cfg: FairseqConfig) -> None:
     utils.import_user_module(cfg.common)
     add_defaults(cfg)
 
+    # cfg.dataset.valid_subset = "valid,valid+,valid+m"
+
     if (
         distributed_utils.is_master(cfg.distributed_training)
         and "job_logging_cfg" in cfg
@@ -126,7 +128,7 @@ def main(cfg: FairseqConfig) -> None:
     # Load valid dataset (we load training data below, based on the latest checkpoint)
     # We load the valid dataset AFTER building the model
     if not cfg.dataset.disable_validation:
-        data_utils.raise_if_valid_subsets_unintentionally_ignored(cfg)
+        # data_utils.raise_if_valid_subsets_unintentionally_ignored(cfg)
         if cfg.dataset.combine_valid_subsets:
             task.load_dataset("valid", combine=True, epoch=1)
         else:
@@ -319,7 +321,7 @@ def train(
     progress.update_config(_flatten_config(cfg))
 
     trainer.begin_epoch(epoch_itr.epoch)
-
+    
     valid_subsets = cfg.dataset.valid_subset.split(",")
     should_stop = False
     num_updates = trainer.get_num_updates()
@@ -559,6 +561,17 @@ def cli_main(
     args = options.parse_args_and_arch(parser, modify_parser=modify_parser)
 
     cfg = convert_namespace_to_omegaconf(args)
+
+    # Adds all validation sets to cfg.dataset.valid_subset
+    # find all files in args.data folder that are "valid{something}" and add them to cfg.valid_subset
+    import re
+    valid_filenames = []
+    for file in os.listdir(args.data):
+        # match the name of the file up to the first dot: valid+m.src-tgt.src to valid+m
+        match = re.match(r"^(valid[^.]*)", file)
+        if match and match.group(1) not in valid_filenames:
+            valid_filenames.append(match.group(1))
+    cfg.dataset.valid_subset = ",".join(valid_filenames)
 
     if cfg.common.use_plasma_view:
         server = PlasmaStore(path=cfg.common.plasma_path)

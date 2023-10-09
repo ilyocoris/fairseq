@@ -187,7 +187,8 @@ def _make_all(lang, vocab, args):
         )
     if args.validpref:
         for k, validpref in enumerate(args.validpref.split(",")):
-            outprefix = "valid{}".format(k) if k > 0 else "valid"
+            # outprefix = "valid{}".format(k) if k > 0 else "valid"
+            outprefix = os.path.basename(validpref)
             _make_dataset(
                 vocab, validpref, outprefix, lang, args=args, num_workers=args.workers
             )

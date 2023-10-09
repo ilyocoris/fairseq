@@ -1152,6 +1152,10 @@ class Trainer(object):
                 _loss, sample_size, logging_output = self.task.valid_step(
                     sample, self.model, self.criterion, **extra_kwargs
                 )
+                # Compute accuracy
+                net_output = self.model(**sample["net_input"])
+                accuracy = sum([(x[0].argmax() == t[0]).float() for x,t in zip(net_output[0],sample["target"])])/sample["nsentences"]
+                
             except RuntimeError as e:
                 if "out of memory" in str(e):
                     self._log_oom(e)
@@ -1186,6 +1190,10 @@ class Trainer(object):
         if self.tpu:
             logging_outputs = self._xla_markstep_and_send_to_cpu(logging_outputs)
         logging_output = self._reduce_and_log_stats(logging_outputs, sample_size)
+
+        metrics.log_scalar("accuracy", accuracy, priority=100, round=3)
+        
+
 
         return logging_output
 
