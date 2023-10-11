@@ -439,6 +439,17 @@ def validate_and_save(
 
     should_stop |= should_stop_early(cfg, valid_losses[0])
 
+    # If valid accuracy == 1, stop training
+    # TODO: can be done for specific valid in subsets = ["valid", "valid+", ...]
+    # check if valid is a key in metrics
+    if "valid" in metrics.get_active_aggregators() and metrics.get_smoothed_values("valid")["accuracy"] >= 0.99:
+        should_stop = True
+        do_save = True
+        logger.info(
+            f"Stopping training due to "
+            f"valid accuracy: {metrics.get_smoothed_values('valid')['accuracy']} >= 0.99"
+        )
+
     # Save checkpoint
     if do_save or should_stop:
         cp_path = checkpoint_utils.save_checkpoint(
